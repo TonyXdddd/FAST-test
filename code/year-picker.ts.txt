@@ -4,6 +4,13 @@ import { Input } from './input';
 export class YearPicker extends Input {
   @observable public open = true;
 
+//>picker-type
+  public constructor() {
+    super();
+    this.type = 'year'; // уникальный тип → customSubmitBlockingElementTypes
+  }
+//<picker-type
+
 //>picker-keydown
   public handleKeydownEvent($event: KeyboardEvent): boolean {
 //>picker-consume

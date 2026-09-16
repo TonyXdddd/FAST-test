@@ -94,7 +94,7 @@ body {
 
 /* ---------- содержимое ---------- */
 h1 { font-size: 25px; line-height: 1.3; margin: 0 0 8px; }
-h2 { font-size: 21px; margin: 36px 0 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+h2 { font-size: 21px; margin: 36px 0 12px; padding-top: 8px; border-top: 1px solid var(--border); clear: both; }
 h3 { font-size: 17px; margin: 0 0 6px; }
 p { margin: 6px 0 10px; }
 a { color: var(--accent); }
@@ -112,6 +112,18 @@ code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-siz
 .tag.fast { color: var(--fast); background: var(--fast-bg); }
 .tag.ok { color: var(--result-ok); background: var(--result-ok-bg); }
 .tag.bad { color: var(--result-bad); background: var(--result-bad-bg); }
+
+.mini-doc {
+  background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  border-radius: 10px; padding: 10px 14px 6px; margin: 0 0 18px; font-size: 14px;
+}
+.mini-doc h2 { font-size: 15px; margin: 0 0 6px; padding: 0; border: 0; color: var(--accent); }
+.mini-doc ul { margin: 0; padding-left: 18px; }
+.mini-doc li { margin: 0 0 6px; }
+.mini-doc p { margin: 4px 0 6px; font-size: 13px; }
+@container (min-width: 1000px) {
+  .mini-doc { float: right; width: 44%; margin: 0 0 14px 20px; }
+}
 
 .plain { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
 .plain ul { margin: 0; padding-left: 20px; }
@@ -147,6 +159,7 @@ code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-siz
 .log .empty { display: block; color: var(--muted); border: 0; }
 .log li.result { font-weight: 600; }
 
-x-input, x-year-picker { display: inline-flex; align-items: center; gap: 4px; }
+x-input, x-year-picker, x-date-interval, x-rating { display: inline-flex; align-items: center; gap: 4px; }
+x-date-interval input { width: auto; }
 x-button { display: inline-block; }
 x-button[hidden] { display: none; }

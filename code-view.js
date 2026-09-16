@@ -1,5 +1,5 @@
 // Левая панель: код компонента с подсветкой синтаксиса и подсветкой регионов при наведении
-const FILES = ['input.template.ts', 'input.ts', 'form-utils.ts', 'button.ts', 'year-picker.ts'];
+const FILES = ['input.template.ts', 'input.ts', 'form-utils.ts', 'button.ts', 'year-picker.ts', 'date-interval-picker.ts'];
 
 const KEYWORDS = new Set([
   'import', 'from', 'export', 'const', 'let', 'type', 'interface', 'class', 'extends', 'implements', 'function',

@@ -86,17 +86,46 @@ document.addEventListener('submit', (e) => {
 }, true);
 
 // ===================== form-utils.ts =====================
-const submitBlockingInputTypes = new Set(['text', 'search', 'url', 'tel', 'email', 'password', 'date', 'month', 'week', 'time', 'datetime-local', 'number']);
+const submitBlockingElementTypes = new Set(['text', 'search', 'url', 'tel', 'email', 'password', 'date', 'month', 'week', 'time', 'datetime-local', 'number']);
+const customSubmitBlockingElementTypes = new Set(['date-interval', 'time-interval', 'year']);
+
+function isCustomElement($element) {
+  return $element.localName.includes('-');
+}
+
+function getElementType($element) {
+  const type = $element.type;
+  return typeof type === 'string' ? type : undefined;
+}
 
 function isSubmitButton($element) {
   if ($element instanceof HTMLButtonElement) return $element.type === 'submit';
   if ($element instanceof HTMLInputElement) return $element.type === 'submit' || $element.type === 'image';
-  return $element.isSubmitButton === true;
+  return isCustomElement($element) && getElementType($element) === 'submit';
 }
 
 function isSubmitBlocking($element) {
-  if ($element instanceof HTMLInputElement) return submitBlockingInputTypes.has($element.type);
-  return $element.blocksImplicitSubmission === true;
+  if ($element instanceof HTMLInputElement) {
+    return submitBlockingElementTypes.has($element.type);
+  }
+  if (!isCustomElement($element)) {
+    return false;
+  }
+  const type = getElementType($element);
+  return type !== undefined && (submitBlockingElementTypes.has(type) || customSubmitBlockingElementTypes.has(type));
+}
+
+// только для журнала: почему элемент считается или не считается полем
+function blockingReason($element) {
+  if ($element instanceof HTMLInputElement) {
+    return submitBlockingElementTypes.has($element.type) ? `нативный input, type «${$element.type}» из первого Set` : `нативный input, type «${$element.type}» не в списке`;
+  }
+  if (!isCustomElement($element)) return `нативный ${$element.localName} — не поле`;
+  const type = getElementType($element);
+  if (type === undefined) return 'кастомный, type не задан';
+  if (submitBlockingElementTypes.has(type)) return `кастомный, type «${type}» из первого Set`;
+  if (customSubmitBlockingElementTypes.has(type)) return `кастомный, type «${type}» из второго Set (уникальные типы)`;
+  return `кастомный, type «${type}» нет ни в одном Set`;
 }
 
 function getDefaultButton($form, host) {
@@ -118,7 +147,7 @@ function getDefaultButton($form, host) {
   return button;
 }
 
-function mimicFormEnterBehavior($elementInternals, host) {
+function mimicFormSubmitBehavior($elementInternals, host) {
   const form = $elementInternals.form;
   if (!form) {
     trace(host, 'ours', '<b>шаг 1</b> · <code>elementInternals.form = null</code> → <code>return false</code>', 'fu-mimic-form');
@@ -139,7 +168,8 @@ function mimicFormEnterBehavior($elementInternals, host) {
   }
 
   const fields = Array.from(form.elements).filter(isSubmitBlocking);
-  trace(host, 'ours', `<b>шаг 4</b> · submit-кнопок нет → текстовые поля: ${fields.map(d).join(', ') || 'нет'} → <b>${fields.length}</b>`, 'fu-mimic-count fu-isSubmitBlocking fu-types');
+  const rows = Array.from(form.elements).map((el) => `${d(el)} — ${isSubmitBlocking(el) ? '✔' : '✘'} ${blockingReason(el)}`);
+  trace(host, 'ours', `<b>шаг 4</b> · submit-кнопок нет → считаем текстовые поля:<br>${rows.join('<br>')}<br>итого: <b>${fields.length}</b>`, 'fu-mimic-count fu-isSubmitBlocking fu-custom-check fu-types fu-custom-types');
   if (fields.length < 2) {
     trace(host, 'ours', '<b>шаг 5</b> · полей меньше двух → <code>form.requestSubmit()</code>, <code>return true</code>', 'fu-mimic-count');
     form.requestSubmit();
@@ -172,8 +202,13 @@ const yearPickerTemplate = html`<input class="internal-control" part="control in
 export class Input extends FASTElement {
   static formAssociated = true;
   elementInternals = this.attachInternals();
-  blocksImplicitSubmission = true;
   get form() { return this.elementInternals.form; }
+  get defaultType() { return 'text'; }
+
+  connectedCallback() {
+    if (!this.type) this.type = this.defaultType;
+    super.connectedCallback();
+  }
 
   handleInputInputEvent() {
     this.elementInternals.setFormValue(this.input.value);
@@ -186,8 +221,8 @@ export class Input extends FASTElement {
 
   handleKeydownEvent($event) {
     if ($event.key === 'Enter') {
-      trace(this, 'fast', '<code>handleKeydownEvent</code>: Enter → <code>mimicFormEnterBehavior(this.elementInternals)</code>', 'tpl-keydown input-keydown-enter');
-      const handled = mimicFormEnterBehavior(this.elementInternals, this);
+      trace(this, 'fast', '<code>handleKeydownEvent</code>: Enter → <code>mimicFormSubmitBehavior(this.elementInternals)</code>', 'tpl-keydown input-keydown-enter');
+      const handled = mimicFormSubmitBehavior(this.elementInternals, this);
       trace(this, 'fast', handled
         ? '<code>return !true</code> → <code>false</code> → FAST вызывает <code>preventDefault()</code> на keydown'
         : '<code>return !false</code> → <code>true</code> → FAST не трогает keydown', 'input-keydown-enter');
@@ -200,6 +235,7 @@ FASTElement.define(Input, { name: 'x-input', template: inputTemplate, styles: fi
 
 export class YearPicker extends Input {
   constructor() { super(); this.open = true; }
+  get defaultType() { return 'year'; }
   handleKeydownEvent($event) {
     if ($event.key === 'Enter' && this.open) {
       this.input.value = '2026';
@@ -222,11 +258,10 @@ export class Button extends FASTElement {
   static formAssociated = true;
   elementInternals = this.attachInternals();
   get form() { return this.elementInternals.form; }
-  get isSubmitButton() { return this.type === 'submit'; }
   constructor() {
     super();
     this.addEventListener('click', () => {
-      if (this.isSubmitButton && !this.matches(':disabled')) {
+      if (this.type === 'submit' && !this.matches(':disabled')) {
         trace(this, 'ours', `${d(this)}: обработчик клика → <code>form.requestSubmit()</code>`, 'btn-click');
         this.form?.requestSubmit();
       }
@@ -238,6 +273,46 @@ FASTElement.define(Button, {
   template: html`<button part="control" ?disabled="${(x) => x.disabled}"><slot></slot></button>`,
   styles: css`button { font: inherit; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--neutral-bg); color: var(--text); cursor: pointer; } button:disabled { opacity: .5; cursor: default; }`,
   attributes: ['type', { property: 'disabled', attribute: 'disabled', mode: 'boolean' }],
+});
+
+export class DateIntervalPicker extends FASTElement {
+  static formAssociated = true;
+  elementInternals = this.attachInternals();
+  get form() { return this.elementInternals.form; }
+
+  connectedCallback() {
+    if (!this.type) this.type = 'date-interval';
+    super.connectedCallback();
+  }
+
+  handleKeydownEvent($event) {
+    if ($event.key === 'Enter') {
+      trace(this, 'fast', '<code>DateIntervalPicker.handleKeydownEvent</code>: Enter → <code>mimicFormSubmitBehavior(this.elementInternals)</code>', 'interval-keydown');
+      const handled = mimicFormSubmitBehavior(this.elementInternals, this);
+      trace(this, 'fast', handled
+        ? '<code>return !true</code> → <code>false</code> → FAST вызывает <code>preventDefault()</code> на keydown'
+        : '<code>return !false</code> → <code>true</code> → FAST не трогает keydown', 'interval-keydown');
+      return !handled;
+    }
+    return true;
+  }
+}
+FASTElement.define(DateIntervalPicker, {
+  name: 'x-date-interval',
+  template: html`<input class="internal-control" part="from" type="date" @keydown="${(x, c) => x.handleKeydownEvent(c.event)}"> — <input class="internal-control" part="to" type="date" @keydown="${(x, c) => x.handleKeydownEvent(c.event)}">`,
+  styles: fieldStyles,
+  attributes: ['type'],
+});
+
+// Сторонний кастомный компонент с типом, которого нет ни в одном Set
+export class Rating extends FASTElement {
+  static formAssociated = true;
+  elementInternals = this.attachInternals();
+}
+FASTElement.define(Rating, {
+  name: 'x-rating',
+  template: html`<span part="stars" style="letter-spacing: 2px">★★★☆☆</span>`,
+  attributes: ['type'],
 });
 
 // ===================== симуляция =====================

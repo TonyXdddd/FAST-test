@@ -1,25 +1,21 @@
 import { FASTElement, attr } from '@microsoft/fast-element';
-import { mimicFormEnterBehavior, type ImplicitSubmissionParticipant } from './form-utils';
+import { mimicFormSubmitBehavior } from './form-utils';
 
-export class Input extends FASTElement implements ImplicitSubmissionParticipant {
+export class Input extends FASTElement {
 //>input-internals
   static formAssociated = true;
 //<input-internals
 
+//>input-type
+  /** Тип из submitBlockingElementTypes — поле участвует в подсчёте */
   @attr public type = 'text';
+//<input-type
   @attr public placeholder = '';
 
   public input?: HTMLInputElement;
 //>input-internals
   public readonly elementInternals = this.attachInternals();
-//<input-internals
 
-//>input-flag
-  /** Текстовое поле для правила неявной отправки */
-  public readonly blocksImplicitSubmission = true;
-//<input-flag
-
-//>input-internals
   public get form(): HTMLFormElement | null {
     return this.elementInternals.form;
   }
@@ -40,7 +36,7 @@ export class Input extends FASTElement implements ImplicitSubmissionParticipant 
   public handleKeydownEvent($event: KeyboardEvent): boolean {
 //>input-keydown-enter
     if ($event.key === 'Enter') {
-      return !mimicFormEnterBehavior(this.elementInternals);
+      return !mimicFormSubmitBehavior(this.elementInternals);
     }
 //<input-keydown-enter
 //>input-keydown-other

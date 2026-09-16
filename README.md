@@ -5,7 +5,7 @@
 ```ts
 public handleKeydownEvent($event: KeyboardEvent): boolean {
   if ($event.key === 'Enter') {
-    return !mimicFormEnterBehavior(this.elementInternals);
+    return !mimicFormSubmitBehavior(this.elementInternals);
   }
   return true;
 }
@@ -13,10 +13,17 @@ public handleKeydownEvent($event: KeyboardEvent): boolean {
 
 **Демо:** https://tonyxdddd.github.io/FAST-test/
 
+## Кастомные компоненты
+
+- **Кастомный элемент** определяется по дефису в имени тега. FAST-компоненты наследуются от `HTMLElement`, а в `form.elements`, кроме input и textarea, бывают нативные `button`, `select`, `fieldset` и `output`.
+- **Поле или нет — решает свойство `type`.** Сначала проверяется первый Set (`submitBlockingElementTypes`, типы нативных полей). Если там нет — второй (`customSubmitBlockingElementTypes`, уникальные типы: `date-interval`, `time-interval`, `year`).
+- **Не считаются** компоненты без `type` или с типом, которого нет ни в одном Set.
+- **Кнопка отправки** — кастомный элемент с `type="submit"`.
+
 ## Как устроена страница
 
-- **Слева** — полный код компонента: `input.template.ts`, `input.ts`, `form-utils.ts`, `button.ts`, `year-picker.ts`.
-- **Справа** — цепочка по этапам и 20 живых кейсов с журналом шагов.
+- **Слева** — полный код компонента: `input.template.ts`, `input.ts`, `form-utils.ts`, `button.ts`, `year-picker.ts`, `date-interval-picker.ts`.
+- **Справа** — врезка про кастомные компоненты, цепочка по этапам и 24 живых кейса с журналом шагов.
 - При наведении на этап, кейс или строку журнала слева подсвечивается код, который за это отвечает.
 
 Кликните в поле и нажмите настоящий Enter. Кнопка «Симулировать» шлёт синтетический `keydown` (и `keypress`, если keydown не отменён). Нативного `change` при симуляции нет.
@@ -30,7 +37,7 @@ public handleKeydownEvent($event: KeyboardEvent): boolean {
 | `code/*.ts.txt` | код для левой панели; строки `//>имя` и `//<имя` размечают регионы подсветки и на странице не показываются |
 | `code-view.js` | подсветка синтаксиса и подсветка регионов при наведении |
 | `explain-impl.js` | работающая реализация (та же логика, что в `code/`) с журналом шагов |
-| `explain-cases-a.js`, `explain-cases-b.js` | описания кейсов и их связь с регионами кода |
+| `explain-cases-a.js`, `explain-cases-b.js`, `explain-cases-c.js` | описания кейсов и их связь с регионами кода |
 | `explain-app.js` | сборка страницы |
 
 `@microsoft/fast-element` 2.10.5 загружается с CDN jsdelivr, сборка не нужна.

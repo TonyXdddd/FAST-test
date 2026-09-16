@@ -13,8 +13,19 @@
 
   <main class="content-pane" id="content">
     <div class="content">
+      <aside class="mini-doc" data-code="fu-custom fu-types fu-custom-types fu-custom-check fu-custom-button">
+        <h2>Кастомные компоненты в форме</h2>
+        <ul>
+          <li><b>Как отличить кастомный элемент.</b> FAST-компоненты наследуются от <code>HTMLElement</code>, а не от <code>HTMLInputElement</code>. Признак «не input и не textarea» не подходит: в <code>form.elements</code> есть ещё нативные <code>button</code>, <code>select</code>, <code>fieldset</code> и <code>output</code> (кейс 24). Надёжный признак — дефис в имени тега.</li>
+          <li><b>Поле или нет — решает <code>type</code>.</b> Сначала проверяем первый Set (типы нативных полей: text, number, date…). Если там нет — второй, <code>customSubmitBlockingElementTypes</code>, с нашими уникальными типами: date-interval, time-interval, year (кейс 21).</li>
+          <li><b>Не считаются</b> компоненты без <code>type</code> или с типом, которого нет ни в одном Set (кейс 22).</li>
+          <li><b>Кнопка отправки</b> — кастомный элемент с <code>type="submit"</code>.</li>
+        </ul>
+        <p class="muted">Новый компонент с уникальным типом нужно добавить во второй Set. Интервал — один элемент, поэтому он считается одним полем (кейс 23).</p>
+      </aside>
+
       <h1>Enter в FAST Input: эмуляция неявной отправки формы</h1>
-      <p>Слева — полный код компонента: шаблон, класс <code>Input</code>, <code>form-utils.ts</code>, кнопка и YearPicker. Справа — цепочка по этапам и 20 живых кейсов. Наведите курсор на этап, кейс или строку журнала, и слева подсветится код, который за это отвечает.</p>
+      <p>Слева — полный код: шаблон, класс <code>Input</code>, <code>form-utils.ts</code>, кнопка, YearPicker и DateIntervalPicker. Справа — цепочка по этапам и 24 живых кейса. Наведите курсор на этап, кейс или строку журнала, и слева подсветится код, который за это отвечает.</p>
       <p>Кликните в поле и нажмите <b>настоящий Enter</b>. Кнопка «Симулировать» шлёт синтетический <code>keydown</code>, а <code>keypress</code> — только если keydown не отменён. Нативного <code>change</code> при симуляции не будет.</p>
       <div class="legend">
         <span class="legend-item"><span class="tag browser">браузер</span> <span class="muted">события браузера</span></span>
@@ -39,20 +50,20 @@
           <p>Браузер присылает <code>keydown</code> на внутренний input. Биндинг <code>@keydown</code> в шаблоне вызывает <code>handleKeydownEvent</code>. Остальные клавиши сразу получают <code>return true</code>, и FAST их не трогает.</p>
         </li>
         <li data-code="input-keydown-enter">
-          <h3><span class="tag fast">компонент</span> Enter → mimicFormEnterBehavior</h3>
-          <p>Для Enter эмуляция запускается <b>сразу</b>, прямо во время keydown. Возвращаемое значение переворачивается: <code>return !mimicFormEnterBehavior(this.elementInternals)</code>.</p>
+          <h3><span class="tag fast">компонент</span> Enter → mimicFormSubmitBehavior</h3>
+          <p>Для Enter эмуляция запускается <b>сразу</b>, прямо во время keydown. Возвращаемое значение переворачивается: <code>return !mimicFormSubmitBehavior(this.elementInternals)</code>.</p>
         </li>
         <li data-code="fu-mimic-form input-internals">
           <h3><span class="tag ours">шаг 1</span> есть ли форма</h3>
           <p>Берётся <code>elementInternals.form</code>. Если формы нет — <code>return false</code> (кейс 19). Атрибут <code>form="id"</code> на самом компоненте тоже работает: это делает ElementInternals.</p>
         </li>
-        <li data-code="fu-getDefaultButton fu-isSubmitButton fu-image btn-contract">
+        <li data-code="fu-getDefaultButton fu-isSubmitButton fu-image fu-custom-button btn-type">
           <h3><span class="tag ours">шаг 2</span> кнопка по умолчанию</h3>
           <p>Это первая submit-кнопка в <code>form.elements</code>: по порядку документа, включая элементы вне формы с <code>form="id"</code> (кейсы 6, 7). Submit-кнопками считаются:</p>
           <ul>
             <li><code>&lt;button&gt;</code> без type или с <code>type="submit"</code>;</li>
             <li><code>input[type=submit|image]</code>;</li>
-            <li>компонент с <code>isSubmitButton = true</code>.</li>
+            <li>кастомный элемент с <code>type="submit"</code>.</li>
           </ul>
           <p>Отмеченный checkbox кнопкой не считается (кейс 11). <code>input[type=image]</code> ищется отдельно, в <code>form.elements</code> его нет.</p>
         </li>
@@ -64,13 +75,13 @@
           <h3><span class="tag browser">браузер</span> после click()</h3>
           <p><code>click()</code> ведёт себя как клик мышью: событие всплывает и его можно отменить (кейс 13). Нативная кнопка запускает проверку формы: при ошибке — <code>invalid</code>, отправки нет (кейс 16). Если ошибок нет — событие <code>submit</code>. Наша кнопка в обработчике клика вызывает <code>form.requestSubmit()</code>, дальше то же самое.</p>
         </li>
-        <li data-code="fu-mimic-count fu-isSubmitBlocking fu-types input-flag fu-mimic-false fu-contract">
+        <li data-code="fu-mimic-count fu-isSubmitBlocking fu-types fu-custom-types fu-custom-check fu-mimic-false">
           <h3><span class="tag ours">шаги 4–5</span> кнопок нет: подсчёт полей</h3>
-          <p>Считаются нативные <code>input</code> 12 текстовых типов и компоненты с <code>blocksImplicitSubmission = true</code>. Checkbox, select, textarea и hidden не считаются. Меньше двух полей — <code>form.requestSubmit()</code> и <code>return true</code> (кейсы 2, 5, 12). Иначе <code>return false</code> (кейсы 3, 4, 17).</p>
+          <p>Считаются нативные <code>input</code> 12 текстовых типов и кастомные элементы, у которых <code>type</code> есть в первом или втором Set (подробнее — во врезке вверху). Checkbox, select, textarea и hidden не считаются. Меньше двух полей — <code>form.requestSubmit()</code> и <code>return true</code> (кейсы 2, 5, 12, 22). Иначе <code>return false</code> (кейсы 3, 4, 17, 21).</p>
         </li>
         <li data-code="input-keydown-enter">
           <h3><span class="tag fast">компонент</span> return !handled → FAST</h3>
-          <p>Если FAST-обработчик вернул не <code>true</code>, FAST сам вызывает <code>preventDefault()</code>. Поэтому <code>true</code> от <code>mimicFormEnterBehavior</code> превращается в <code>false</code> и отменяет keydown. <code>false</code> превращается в <code>true</code>, и keydown остаётся как есть.</p>
+          <p>Если FAST-обработчик вернул не <code>true</code>, FAST сам вызывает <code>preventDefault()</code>. Поэтому <code>true</code> от <code>mimicFormSubmitBehavior</code> превращается в <code>false</code> и отменяет keydown. <code>false</code> превращается в <code>true</code>, и keydown остаётся как есть.</p>
         </li>
         <li data-code="input-keydown-enter tpl-change input-change">
           <h3><span class="tag browser">браузер</span> последствия отмены keydown</h3>

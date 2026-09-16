@@ -1,33 +1,53 @@
 //>fu-types
-const submitBlockingInputTypes = new Set([
+/** Нативные input этих типов блокируют неявную отправку (HTML §4.10.22.2) */
+const submitBlockingElementTypes = new Set([
   'text', 'search', 'url', 'tel', 'email', 'password', 'date', 'month', 'week', 'time', 'datetime-local', 'number',
 ]);
 //<fu-types
 
-//>fu-contract
-/** Реализуют наши компоненты */
-export interface ImplicitSubmissionParticipant {
-  /** Текстовое поле: участвует в правиле «больше одного поля — не отправлять» */
-  readonly blocksImplicitSubmission?: boolean;
-  /** Сейчас ведёт себя как <button type="submit"> */
-  readonly isSubmitButton?: boolean;
+//>fu-custom-types
+/** Уникальные типы наших компонентов, которые тоже считаются текстовыми полями */
+const customSubmitBlockingElementTypes = new Set([
+  'date-interval', 'time-interval', 'year',
+]);
+//<fu-custom-types
+
+//>fu-custom
+/** Кастомный элемент: в имени тега всегда есть дефис */
+function isCustomElement($element: Element): boolean {
+  return $element.localName.includes('-');
 }
 
-type Participant = Element & ImplicitSubmissionParticipant;
-//<fu-contract
+/** Свойство type компонента, если это строка */
+function getElementType($element: Element): string | undefined {
+  const type = ($element as Element & { type?: unknown }).type;
+  return typeof type === 'string' ? type : undefined;
+}
+//<fu-custom
 
 //>fu-isSubmitButton
 function isSubmitButton($element: Element): boolean {
   if ($element instanceof HTMLButtonElement) return $element.type === 'submit';
   if ($element instanceof HTMLInputElement) return $element.type === 'submit' || $element.type === 'image';
-  return ($element as Participant).isSubmitButton === true;
+//>fu-custom-button
+  return isCustomElement($element) && getElementType($element) === 'submit';
+//<fu-custom-button
 }
 //<fu-isSubmitButton
 
 //>fu-isSubmitBlocking
 function isSubmitBlocking($element: Element): boolean {
-  if ($element instanceof HTMLInputElement) return submitBlockingInputTypes.has($element.type);
-  return ($element as Participant).blocksImplicitSubmission === true;
+  if ($element instanceof HTMLInputElement) {
+    return submitBlockingElementTypes.has($element.type);
+  }
+  if (!isCustomElement($element)) {
+    return false; // textarea, select, button, fieldset, output
+  }
+//>fu-custom-check
+  const type = getElementType($element);
+  return type !== undefined
+    && (submitBlockingElementTypes.has(type) || customSubmitBlockingElementTypes.has(type));
+//<fu-custom-check
 }
 //<fu-isSubmitBlocking
 
@@ -54,7 +74,7 @@ function getDefaultButton($form: HTMLFormElement): HTMLElement | null {
  * Повторяет неявную отправку формы по Enter (HTML Standard §4.10.22.2).
  * @returns true — Enter обработан: нашлась кнопка по умолчанию или вызван requestSubmit()
  */
-export function mimicFormEnterBehavior($elementInternals: ElementInternals): boolean {
+export function mimicFormSubmitBehavior($elementInternals: ElementInternals): boolean {
 //>fu-mimic-form
   const form = $elementInternals.form;
   if (!form) {

@@ -2,12 +2,13 @@ import { renderCode, bindHover } from './code-view.js';
 import { trace, simulateEnter } from './explain-impl.js';
 import casesA from './explain-cases-a.js';
 import casesB from './explain-cases-b.js';
+import casesC from './explain-cases-c.js';
 
 const EMPTY_LOG = '<li class="empty">Кликните в поле и нажмите Enter — или нажмите «Симулировать».</li>';
 const container = document.getElementById('cases');
 let currentGroup = null;
 
-for (const c of [...casesA, ...casesB]) {
+for (const c of [...casesA, ...casesB, ...casesC]) {
   if (c.group !== currentGroup) {
     currentGroup = c.group;
     const h = document.createElement('h3');
@@ -53,6 +54,7 @@ for (const c of [...casesA, ...casesB]) {
     card.querySelector('.log').innerHTML = EMPTY_LOG;
     card.querySelectorAll('form').forEach((f) => f.reset());
     card.querySelectorAll('x-input, x-year-picker').forEach((el) => { if (el.input) el.input.value = ''; });
+    card.querySelectorAll('x-date-interval').forEach((el) => el.shadowRoot?.querySelectorAll('input').forEach((i) => { i.value = ''; }));
     c.reset?.(card);
   });
   controls.append(reset);

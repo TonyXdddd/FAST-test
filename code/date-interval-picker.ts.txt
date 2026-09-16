@@ -1,0 +1,32 @@
+import { FASTElement, attr, html } from '@microsoft/fast-element';
+import { mimicFormSubmitBehavior } from './form-utils';
+
+export const dateIntervalPickerTemplate = html<DateIntervalPicker>`
+  <input part="from" type="date" @keydown="${(x, c) => x.handleKeydownEvent(c.event as KeyboardEvent)}" />
+  <input part="to" type="date" @keydown="${(x, c) => x.handleKeydownEvent(c.event as KeyboardEvent)}" />
+`;
+
+export class DateIntervalPicker extends FASTElement {
+  static formAssociated = true;
+
+//>interval-type
+  /** Уникальный тип: учитывается через customSubmitBlockingElementTypes */
+  @attr public type = 'date-interval';
+//<interval-type
+
+  public readonly elementInternals = this.attachInternals();
+
+  public get form(): HTMLFormElement | null {
+    return this.elementInternals.form;
+  }
+
+//>interval-keydown
+  /** @ignore */
+  public handleKeydownEvent($event: KeyboardEvent): boolean {
+    if ($event.key === 'Enter') {
+      return !mimicFormSubmitBehavior(this.elementInternals);
+    }
+    return true;
+  }
+//<interval-keydown
+}
