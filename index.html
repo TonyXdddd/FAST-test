@@ -2,117 +2,92 @@
 <html lang="ru">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Enter в Input — эмуляция неявной отправки</title>
+<title>Enter в FAST Input — эмуляция неявной отправки</title>
 <link rel="stylesheet" href="explain.css">
 <body>
-<main>
-  <h1>Enter в Input: как работает эмуляция неявной отправки формы</h1>
-  <p>Сверху — цепочка по этапам: что происходит от нажатия Enter до отправки формы. Ниже — 20 живых кейсов. Кликните в поле и нажмите <b>настоящий Enter</b>: справа журнал покажет каждый шаг. Кнопка «Симулировать» шлёт синтетические <code>keydown</code> → <code>keypress</code>. Нативного <code>change</code> при этом не будет, это умеет только настоящее нажатие.</p>
-  <div class="legend">
-    <span class="legend-item"><span class="tag browser">браузер</span> <span class="muted">события, которые шлёт браузер</span></span>
-    <span class="legend-item"><span class="tag fast">компонент</span> <span class="muted">методы Input, вызванные FAST-биндингами</span></span>
-    <span class="legend-item"><span class="tag ours">наш код</span> <span class="muted">form-utils и код потребителя</span></span>
-    <span class="legend-item"><span class="tag ok">итог</span> <span class="muted">совпало с ожиданием</span></span>
-    <span class="legend-item"><span class="tag bad">итог</span> <span class="muted">не совпало</span></span>
-  </div>
+<div class="layout">
+  <aside class="code-pane" id="code-pane" aria-label="Код компонента">
+    <div class="code-hint">Наведите курсор на раздел <span class="hint-wide">справа</span><span class="hint-narrow">ниже</span> — здесь подсветится соответствующий код</div>
+    <div id="code"></div>
+  </aside>
 
-  <h2>Зачем вообще эмулировать</h2>
-  <ul>
-    <li>Внутренний <code>&lt;input&gt;</code> лежит в shadow DOM компонента. С формой снаружи он не связан, поэтому браузер сам по Enter ничего не отправит.</li>
-    <li>Браузерный алгоритм учитывает только нативные элементы. Наших полей и наших кнопок для него не существует.</li>
-    <li>Поэтому Input сам повторяет алгоритм неявной отправки из спецификации HTML (§4.10.22.2) и учитывает всех соседей в форме — и нативных, и кастомных.</li>
-  </ul>
+  <main class="content-pane" id="content">
+    <div class="content">
+      <h1>Enter в FAST Input: эмуляция неявной отправки формы</h1>
+      <p>Слева — полный код компонента: шаблон, класс <code>Input</code>, <code>form-utils.ts</code>, кнопка и YearPicker. Справа — цепочка по этапам и 20 живых кейсов. Наведите курсор на этап, кейс или строку журнала, и слева подсветится код, который за это отвечает.</p>
+      <p>Кликните в поле и нажмите <b>настоящий Enter</b>. Кнопка «Симулировать» шлёт синтетический <code>keydown</code>, а <code>keypress</code> — только если keydown не отменён. Нативного <code>change</code> при симуляции не будет.</p>
+      <div class="legend">
+        <span class="legend-item"><span class="tag browser">браузер</span> <span class="muted">события браузера</span></span>
+        <span class="legend-item"><span class="tag fast">компонент</span> <span class="muted">методы компонента</span></span>
+        <span class="legend-item"><span class="tag ours">наш код</span> <span class="muted">form-utils и код потребителя</span></span>
+        <span class="legend-item"><span class="tag ok">итог</span> <span class="muted">совпало с ожиданием</span></span>
+      </div>
 
-  <h2>Цепочка по этапам</h2>
-  <ol class="stages">
-    <li>
-      <h3><span class="tag browser">браузер</span> keydown</h3>
-      <p>FAST вызывает <code>handleKeydownEvent</code>. Enter здесь не обрабатываем и возвращаем <code>true</code>. Если вернуть что-то другое, FAST сам вызовет <code>preventDefault()</code>, и браузер не пришлёт keypress (кейс 17).</p>
-<pre>public handleKeydownEvent($event: KeyboardEvent): boolean {
-  // Enter здесь не обрабатываем
-  return true;
-}</pre>
-    </li>
-    <li>
-      <h3><span class="tag browser">браузер</span> keypress → <span class="tag fast">компонент</span> handleKeypressEvent</h3>
-      <p>Браузер присылает keypress, только если keydown никто не отменил и не идёт IME-ввод. Поэтому отмена на keydown снаружи (кейс 14) выключает всю цепочку, и отдельная проверка не нужна.</p>
-<pre>// input.template.ts
-@keypress="${(x, c) =&gt; x.handleKeypressEvent(c.event as KeyboardEvent)}"
+      <h2>Зачем эмулировать</h2>
+      <div class="plain" data-code="tpl-input input-internals">
+        <ul>
+          <li>Внутренний <code>&lt;input&gt;</code> лежит в shadow DOM компонента. Форма определяется только в пределах одного DOM-дерева, поэтому с внешней формой он не связан и сам её не отправит.</li>
+          <li>С формой связан хост: <code>static formAssociated = true</code> и <code>attachInternals()</code>. Но неявная отправка в этот механизм не входит: браузер по Enter смотрит только на нативные элементы.</li>
+          <li>Поэтому Input сам повторяет алгоритм из спецификации HTML (§4.10.22.2) и учитывает всех соседей в форме — нативных и кастомных.</li>
+        </ul>
+      </div>
 
-// input.ts
-public handleKeypressEvent($event: KeyboardEvent): boolean {
-  handleFormEnterKeypress($event, this.elementInternals);
-  return true; // иначе FAST вызовет preventDefault и пропадёт change
-}</pre>
-    </li>
-    <li>
-      <h3><span class="tag ours">наш код</span> фильтр клавиши и отложенный запуск</h3>
-      <p>Нужен именно Enter, без IME (<code>isComposing</code>, <code>keyCode 229</code> в Safari) и без Ctrl/Alt/Meta (кейс 20). Отправку <b>не делаем сразу</b>, а откладываем через <code>setTimeout</code>. Наш обработчик висит на внутреннем input и срабатывает первым, раньше обработчиков на хосте, форме и документе.</p>
-<pre>const isEnter = $event.key === 'Enter'
-  &amp;&amp; !$event.isComposing &amp;&amp; $event.keyCode !== 229
-  &amp;&amp; !$event.ctrlKey &amp;&amp; !$event.altKey &amp;&amp; !$event.metaKey;
-if (!isEnter) {
-  return;
-}
-setTimeout(() =&gt; { /* этап 5 */ });</pre>
-    </li>
-    <li>
-      <h3><span class="tag browser">браузер</span> действие по умолчанию для keypress: change</h3>
-      <p>Когда keypress обработан, браузер фиксирует значение: если текст менялся, внутренний input шлёт <code>change</code>, а <code>handleInputChangeEvent</code> пробрасывает его наружу. Это происходит до нашего <code>setTimeout</code>, поэтому <code>change</code> приходит раньше отправки, как у нативного поля (кейс 1).</p>
-    </li>
-    <li>
-      <h3><span class="tag ours">наш код</span> setTimeout: проверка отмены</h3>
-      <p>К этому моменту событие прошло весь путь. Если кто-то вызвал <code>preventDefault()</code> (например, на форме, кейс 15), выходим. Иначе запускаем сам алгоритм.</p>
-<pre>setTimeout(() =&gt; {
-  if (!$event.defaultPrevented) {
-    mimicFormEnterBehavior($elementInternals);
-  }
-});</pre>
-    </li>
-    <li>
-      <h3><span class="tag ours">шаг 1</span> есть ли форма</h3>
-      <p><code>elementInternals.form</code>. Если формы нет, выходим (кейс 19). Атрибут <code>form="id"</code> на самом компоненте тоже работает: это делает ElementInternals.</p>
-    </li>
-    <li>
-      <h3><span class="tag ours">шаг 2</span> кнопка по умолчанию</h3>
-      <p>Это первая submit-кнопка в <code>form.elements</code> — по порядку документа, включая элементы вне формы с <code>form="id"</code> (кейс 7). Submit-кнопками считаются:</p>
-      <ul>
-        <li><code>&lt;button&gt;</code> без type или с <code>type="submit"</code>;</li>
-        <li><code>input[type=submit]</code> и <code>input[type=image]</code>;</li>
-        <li>наш компонент с <code>isSubmitButton = true</code>.</li>
-      </ul>
-      <p>Checkbox с <code>checked</code> кнопкой не считается (кейс 11). <code>input[type=image]</code> в <code>form.elements</code> нет, его ищем отдельно.</p>
-<pre>function isSubmitButton($element: Element): boolean {
-  if ($element instanceof HTMLButtonElement) return $element.type === 'submit';
-  if ($element instanceof HTMLInputElement) return $element.type === 'submit' || $element.type === 'image';
-  return ($element as Participant).isSubmitButton === true;
-}</pre>
-    </li>
-    <li>
-      <h3><span class="tag ours">шаг 3</span> кнопка нашлась</h3>
-      <p>Если кнопка неактивна (<code>:disabled</code>, в том числе через <code>&lt;fieldset disabled&gt;</code>), ничего не делаем и следующую кнопку <b>не ищем</b> (кейсы 8, 9). Если активна — <code>button.click()</code>. Видимость роли не играет (кейс 10).</p>
-<pre>if (!button.matches(':disabled')) {
-  button.click();
-}
-return;</pre>
-    </li>
-    <li>
-      <h3><span class="tag browser">браузер</span> после click()</h3>
-      <p><code>click()</code> даёт такой же клик, как мышь: он всплывает и его можно отменить (кейс 13). Если клик не отменён, браузер проверяет форму: при ошибке — <code>invalid</code> и фокус на поле, отправки нет (кейс 16). Если всё в порядке — событие <code>submit</code> (его тоже можно отменить) и отправка. Наша кнопка в обработчике клика вызывает <code>form.requestSubmit()</code>, дальше происходит то же самое.</p>
-    </li>
-    <li>
-      <h3><span class="tag ours">шаги 4–5</span> кнопок нет: подсчёт полей</h3>
-      <p>Считаем текстовые поля формы: нативные <code>input</code> 12 типов (text, search, url, tel, email, password, date, month, week, time, datetime-local, number) и наши компоненты с <code>blocksImplicitSubmission = true</code>. Checkbox, select, textarea и hidden не считаются. Если полей меньше двух — <code>form.requestSubmit()</code>, <code>submitter = null</code> (кейсы 2, 5, 12). Иначе ничего не делаем (кейсы 3, 4).</p>
-<pre>if (Array.from(form.elements).filter(isSubmitBlocking).length &lt; 2) {
-  form.requestSubmit();
-}</pre>
-    </li>
-  </ol>
+      <h2>Цепочка по этапам</h2>
+      <ol class="stages">
+        <li data-code="tpl-keydown input-keydown">
+          <h3><span class="tag browser">браузер</span> keydown → handleKeydownEvent</h3>
+          <p>Браузер присылает <code>keydown</code> на внутренний input. Биндинг <code>@keydown</code> в шаблоне вызывает <code>handleKeydownEvent</code>. Остальные клавиши сразу получают <code>return true</code>, и FAST их не трогает.</p>
+        </li>
+        <li data-code="input-keydown-enter">
+          <h3><span class="tag fast">компонент</span> Enter → mimicFormEnterBehavior</h3>
+          <p>Для Enter эмуляция запускается <b>сразу</b>, прямо во время keydown. Возвращаемое значение переворачивается: <code>return !mimicFormEnterBehavior(this.elementInternals)</code>.</p>
+        </li>
+        <li data-code="fu-mimic-form input-internals">
+          <h3><span class="tag ours">шаг 1</span> есть ли форма</h3>
+          <p>Берётся <code>elementInternals.form</code>. Если формы нет — <code>return false</code> (кейс 19). Атрибут <code>form="id"</code> на самом компоненте тоже работает: это делает ElementInternals.</p>
+        </li>
+        <li data-code="fu-getDefaultButton fu-isSubmitButton fu-image btn-contract">
+          <h3><span class="tag ours">шаг 2</span> кнопка по умолчанию</h3>
+          <p>Это первая submit-кнопка в <code>form.elements</code>: по порядку документа, включая элементы вне формы с <code>form="id"</code> (кейсы 6, 7). Submit-кнопками считаются:</p>
+          <ul>
+            <li><code>&lt;button&gt;</code> без type или с <code>type="submit"</code>;</li>
+            <li><code>input[type=submit|image]</code>;</li>
+            <li>компонент с <code>isSubmitButton = true</code>.</li>
+          </ul>
+          <p>Отмеченный checkbox кнопкой не считается (кейс 11). <code>input[type=image]</code> ищется отдельно, в <code>form.elements</code> его нет.</p>
+        </li>
+        <li data-code="fu-mimic-button fu-mimic-disabled btn-disabled">
+          <h3><span class="tag ours">шаг 3</span> кнопка нашлась → return true</h3>
+          <p>Неактивная кнопка (<code>:disabled</code>, в том числе через <code>&lt;fieldset disabled&gt;</code>) не нажимается, и следующая не ищется (кейсы 8, 9). Активная нажимается через <code>button.click()</code>, видимость роли не играет (кейс 10). В обоих случаях функция возвращает <code>true</code>.</p>
+        </li>
+        <li data-code="btn-click fu-mimic-disabled">
+          <h3><span class="tag browser">браузер</span> после click()</h3>
+          <p><code>click()</code> ведёт себя как клик мышью: событие всплывает и его можно отменить (кейс 13). Нативная кнопка запускает проверку формы: при ошибке — <code>invalid</code>, отправки нет (кейс 16). Если ошибок нет — событие <code>submit</code>. Наша кнопка в обработчике клика вызывает <code>form.requestSubmit()</code>, дальше то же самое.</p>
+        </li>
+        <li data-code="fu-mimic-count fu-isSubmitBlocking fu-types input-flag fu-mimic-false fu-contract">
+          <h3><span class="tag ours">шаги 4–5</span> кнопок нет: подсчёт полей</h3>
+          <p>Считаются нативные <code>input</code> 12 текстовых типов и компоненты с <code>blocksImplicitSubmission = true</code>. Checkbox, select, textarea и hidden не считаются. Меньше двух полей — <code>form.requestSubmit()</code> и <code>return true</code> (кейсы 2, 5, 12). Иначе <code>return false</code> (кейсы 3, 4, 17).</p>
+        </li>
+        <li data-code="input-keydown-enter">
+          <h3><span class="tag fast">компонент</span> return !handled → FAST</h3>
+          <p>Если FAST-обработчик вернул не <code>true</code>, FAST сам вызывает <code>preventDefault()</code>. Поэтому <code>true</code> от <code>mimicFormEnterBehavior</code> превращается в <code>false</code> и отменяет keydown. <code>false</code> превращается в <code>true</code>, и keydown остаётся как есть.</p>
+        </li>
+        <li data-code="input-keydown-enter tpl-change input-change">
+          <h3><span class="tag browser">браузер</span> последствия отмены keydown</h3>
+          <p>Если keydown отменён, браузер не присылает <code>keypress</code>, а нативный <code>change</code> по Enter не срабатывает. Он придёт позже, при потере фокуса (кейс 1). Если не отменён — приходят <code>keypress</code> и <code>change</code> (кейсы 17, 19).</p>
+        </li>
+        <li data-code="tpl-keydown input-keydown">
+          <h3><span class="tag browser">браузер</span> порядок обработчиков</h3>
+          <p>Обработчик висит на внутреннем input, поэтому срабатывает раньше обработчиков на форме и документе. Отменить отправку через <code>preventDefault()</code> на форме уже нельзя (кейс 14). Перехватить Enter можно только в capture-фазе через <code>stopPropagation()</code> (кейс 15).</p>
+        </li>
+      </ol>
 
-  <h2>Кейсы</h2>
-  <p>В каждой карточке слева ожидание, объяснение и живая форма, справа журнал шагов. Время отсчитывается от <code>keydown</code>. Отправка формы на этой странице отменена, чтобы она не перезагружалась.</p>
-  <div id="cases"></div>
-</main>
+      <h2>Кейсы</h2>
+      <p>В каждой карточке: ожидание, объяснение, живая форма и журнал шагов. Время в журнале отсчитывается от <code>keydown</code>. Отправка формы на странице отменена, чтобы она не перезагружалась.</p>
+      <div id="cases"></div>
+    </div>
+  </main>
+</div>
 <script type="module" src="explain-app.js"></script>
 </body>
 </html>

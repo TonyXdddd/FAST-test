@@ -1,0 +1,89 @@
+//>fu-types
+const submitBlockingInputTypes = new Set([
+  'text', 'search', 'url', 'tel', 'email', 'password', 'date', 'month', 'week', 'time', 'datetime-local', 'number',
+]);
+//<fu-types
+
+//>fu-contract
+/** Реализуют наши компоненты */
+export interface ImplicitSubmissionParticipant {
+  /** Текстовое поле: участвует в правиле «больше одного поля — не отправлять» */
+  readonly blocksImplicitSubmission?: boolean;
+  /** Сейчас ведёт себя как <button type="submit"> */
+  readonly isSubmitButton?: boolean;
+}
+
+type Participant = Element & ImplicitSubmissionParticipant;
+//<fu-contract
+
+//>fu-isSubmitButton
+function isSubmitButton($element: Element): boolean {
+  if ($element instanceof HTMLButtonElement) return $element.type === 'submit';
+  if ($element instanceof HTMLInputElement) return $element.type === 'submit' || $element.type === 'image';
+  return ($element as Participant).isSubmitButton === true;
+}
+//<fu-isSubmitButton
+
+//>fu-isSubmitBlocking
+function isSubmitBlocking($element: Element): boolean {
+  if ($element instanceof HTMLInputElement) return submitBlockingInputTypes.has($element.type);
+  return ($element as Participant).blocksImplicitSubmission === true;
+}
+//<fu-isSubmitBlocking
+
+//>fu-getDefaultButton
+/** Первая submit-кнопка формы в порядке документа, включая кнопки с form="id" вне <form> */
+function getDefaultButton($form: HTMLFormElement): HTMLElement | null {
+  let button = (Array.from($form.elements).find(isSubmitButton) as HTMLElement | undefined) ?? null;
+
+//>fu-image
+  // <input type="image"> не входит в form.elements
+  const root = $form.getRootNode() as Document | ShadowRoot;
+  const image = Array.from(root.querySelectorAll('input')).find($ => $.type === 'image' && $.form === $form);
+  if (image && (!button || button.compareDocumentPosition(image) & Node.DOCUMENT_POSITION_PRECEDING)) {
+    button = image;
+  }
+//<fu-image
+
+  return button;
+}
+//<fu-getDefaultButton
+
+//>fu-mimic
+/**
+ * Повторяет неявную отправку формы по Enter (HTML Standard §4.10.22.2).
+ * @returns true — Enter обработан: нашлась кнопка по умолчанию или вызван requestSubmit()
+ */
+export function mimicFormEnterBehavior($elementInternals: ElementInternals): boolean {
+//>fu-mimic-form
+  const form = $elementInternals.form;
+  if (!form) {
+    return false;
+  }
+//<fu-mimic-form
+
+//>fu-mimic-button
+  const button = getDefaultButton(form);
+  if (button) {
+//>fu-mimic-disabled
+    // disabled (в т.ч. через <fieldset disabled>) — ничего не делать и следующую кнопку не искать
+    if (!button.matches(':disabled')) {
+      button.click();
+    }
+//<fu-mimic-disabled
+    return true;
+  }
+//<fu-mimic-button
+
+//>fu-mimic-count
+  if (Array.from(form.elements).filter(isSubmitBlocking).length < 2) {
+    form.requestSubmit();
+    return true;
+  }
+//<fu-mimic-count
+
+//>fu-mimic-false
+  return false;
+//<fu-mimic-false
+}
+//<fu-mimic

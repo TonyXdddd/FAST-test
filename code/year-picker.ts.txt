@@ -1,0 +1,19 @@
+import { observable } from '@microsoft/fast-element';
+import { Input } from './input';
+
+export class YearPicker extends Input {
+  @observable public open = true;
+
+//>picker-keydown
+  public handleKeydownEvent($event: KeyboardEvent): boolean {
+//>picker-consume
+    if ($event.key === 'Enter' && this.open) {
+      this.input!.value = '2026';
+      this.open = false;
+      return false; // Enter потрачен на выбор значения, форму не отправляем
+    }
+//<picker-consume
+    return super.handleKeydownEvent($event);
+  }
+//<picker-keydown
+}

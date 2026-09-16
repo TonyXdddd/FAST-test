@@ -1,0 +1,21 @@
+import { html, ref } from '@microsoft/fast-element';
+import type { Input } from './input';
+
+export const inputTemplate = html<Input>`<template>
+//>tpl-input
+  <input
+    class="internal-control"
+    part="control input"
+    type="${x => x.type}"
+    placeholder="${x => x.placeholder}"
+    @input="${(x, c) => x.handleInputInputEvent(c.event as InputEvent)}"
+//>tpl-change
+    @change="${(x, c) => x.handleInputChangeEvent(c.event)}"
+//<tpl-change
+//>tpl-keydown
+    @keydown="${(x, c) => x.handleKeydownEvent(c.event as KeyboardEvent)}"
+//<tpl-keydown
+    ${ref('input')}
+  />
+//<tpl-input
+</template>`;

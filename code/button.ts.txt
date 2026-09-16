@@ -1,0 +1,36 @@
+import { FASTElement, attr, html } from '@microsoft/fast-element';
+import type { ImplicitSubmissionParticipant } from './form-utils';
+
+export const buttonTemplate = html<Button>`<button part="control" ?disabled="${x => x.disabled}"><slot></slot></button>`;
+
+export class Button extends FASTElement implements ImplicitSubmissionParticipant {
+  static formAssociated = true;
+
+  @attr public type?: 'submit' | 'reset' | 'button';
+//>btn-disabled
+  @attr({ mode: 'boolean' }) public disabled = false; // атрибут — по нему работает :disabled
+//<btn-disabled
+
+  public readonly elementInternals = this.attachInternals();
+
+  public get form(): HTMLFormElement | null {
+    return this.elementInternals.form;
+  }
+
+//>btn-contract
+  public get isSubmitButton(): boolean {
+    return this.type === 'submit';
+  }
+//<btn-contract
+
+//>btn-click
+  public constructor() {
+    super();
+    this.addEventListener('click', () => {
+      if (this.isSubmitButton && !this.matches(':disabled')) {
+        this.form?.requestSubmit();
+      }
+    });
+  }
+//<btn-click
+}

@@ -1,3 +1,4 @@
+import { renderCode, bindHover } from './code-view.js';
 import { trace, simulateEnter } from './explain-impl.js';
 import casesA from './explain-cases-a.js';
 import casesB from './explain-cases-b.js';
@@ -20,6 +21,7 @@ for (const c of [...casesA, ...casesB]) {
   card.id = c.id;
   card.dataset.case = c.id;
   card.dataset.expect = c.expect;
+  card.dataset.code = c.code;
   card.innerHTML = `
     <h3></h3>
     <div class="case-grid">
@@ -34,7 +36,6 @@ for (const c of [...casesA, ...casesB]) {
       </div>
     </div>`;
   card.querySelector('h3').textContent = `${c.id.slice(1)}. ${c.title}`;
-
   if (c.expectFor) card._expectFor = (e) => c.expectFor(e, card);
 
   const controls = card.querySelector('.controls');
@@ -51,7 +52,7 @@ for (const c of [...casesA, ...casesB]) {
   reset.addEventListener('click', () => {
     card.querySelector('.log').innerHTML = EMPTY_LOG;
     card.querySelectorAll('form').forEach((f) => f.reset());
-    card.querySelectorAll('x-input, x-input-bad, x-picker').forEach((el) => { if (el.input) el.input.value = ''; });
+    card.querySelectorAll('x-input, x-year-picker').forEach((el) => { if (el.input) el.input.value = ''; });
     c.reset?.(card);
   });
   controls.append(reset);
@@ -60,4 +61,6 @@ for (const c of [...casesA, ...casesB]) {
   c.setup?.(card, { trace });
 }
 
+await renderCode(document.getElementById('code'));
+bindHover(document.getElementById('content'));
 document.documentElement.dataset.ready = 'true';
