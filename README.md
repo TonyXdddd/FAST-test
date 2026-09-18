@@ -15,7 +15,8 @@ public handleKeydownEvent($event: KeyboardEvent): boolean {
 
 ## Кастомные компоненты
 
-- **Кастомный элемент** определяется по дефису в имени тега. FAST-компоненты наследуются от `HTMLElement`, а в `form.elements`, кроме input и textarea, бывают нативные `button`, `select`, `fieldset` и `output`.
+- **Кастомный элемент** — тот, чей тег зарегистрирован: `customElements.get(localName)`. FAST-компоненты наследуются от `HTMLElement`, а в `form.elements`, кроме input и textarea, бывают нативные `button`, `select`, `fieldset` и `output`.
+- **`input[type=image]` намеренно не поддерживается:** его нет в `form.elements`.
 - **Поле или нет — решает свойство `type`.** Сначала проверяется первый Set (`submitBlockingElementTypes`, типы нативных полей). Если там нет — второй (`customSubmitBlockingElementTypes`, уникальные типы: `date-interval`, `time-interval`, `year`).
 - **Не считаются** компоненты без `type` или с типом, которого нет ни в одном Set.
 - **Кнопка отправки** — кастомный элемент с `type="submit"`.

@@ -16,7 +16,7 @@
       <aside class="mini-doc" data-code="fu-custom fu-types fu-custom-types fu-custom-check fu-custom-button">
         <h2>Кастомные компоненты в форме</h2>
         <ul>
-          <li><b>Как отличить кастомный элемент.</b> FAST-компоненты наследуются от <code>HTMLElement</code>, а не от <code>HTMLInputElement</code>. Признак «не input и не textarea» не подходит: в <code>form.elements</code> есть ещё нативные <code>button</code>, <code>select</code>, <code>fieldset</code> и <code>output</code> (кейс 24). Надёжный признак — дефис в имени тега.</li>
+          <li><b>Как отличить кастомный элемент.</b> FAST-компоненты наследуются от <code>HTMLElement</code>, а не от <code>HTMLInputElement</code>. Признак «не input и не textarea» не подходит: в <code>form.elements</code> есть ещё нативные <code>button</code>, <code>select</code>, <code>fieldset</code> и <code>output</code> (кейс 24). Признак кастомного элемента — его тег зарегистрирован: <code>customElements.get(localName)</code>.</li>
           <li><b>Поле или нет — решает <code>type</code>.</b> Сначала проверяем первый Set (типы нативных полей: text, number, date…). Если там нет — второй, <code>customSubmitBlockingElementTypes</code>, с нашими уникальными типами: date-interval, time-interval, year (кейс 21).</li>
           <li><b>Не считаются</b> компоненты без <code>type</code> или с типом, которого нет ни в одном Set (кейс 22).</li>
           <li><b>Кнопка отправки</b> — кастомный элемент с <code>type="submit"</code>.</li>
@@ -57,15 +57,15 @@
           <h3><span class="tag ours">шаг 1</span> есть ли форма</h3>
           <p>Берётся <code>elementInternals.form</code>. Если формы нет — <code>return false</code> (кейс 19). Атрибут <code>form="id"</code> на самом компоненте тоже работает: это делает ElementInternals.</p>
         </li>
-        <li data-code="fu-getDefaultButton fu-isSubmitButton fu-image fu-custom-button btn-type">
+        <li data-code="fu-getDefaultButton fu-isSubmitButton fu-custom-button btn-type">
           <h3><span class="tag ours">шаг 2</span> кнопка по умолчанию</h3>
           <p>Это первая submit-кнопка в <code>form.elements</code>: по порядку документа, включая элементы вне формы с <code>form="id"</code> (кейсы 6, 7). Submit-кнопками считаются:</p>
           <ul>
             <li><code>&lt;button&gt;</code> без type или с <code>type="submit"</code>;</li>
-            <li><code>input[type=submit|image]</code>;</li>
+            <li><code>input[type=submit]</code>;</li>
             <li>кастомный элемент с <code>type="submit"</code>.</li>
           </ul>
-          <p>Отмеченный checkbox кнопкой не считается (кейс 11). <code>input[type=image]</code> ищется отдельно, в <code>form.elements</code> его нет.</p>
+          <p>Отмеченный checkbox кнопкой не считается (кейс 11). <code>input[type=image]</code> намеренно не поддерживается: в <code>form.elements</code> его нет.</p>
         </li>
         <li data-code="fu-mimic-button fu-mimic-disabled btn-disabled">
           <h3><span class="tag ours">шаг 3</span> кнопка нашлась → return true</h3>

@@ -6,29 +6,29 @@ const submitBlockingElementTypes = new Set([
 //<fu-types
 
 //>fu-custom-types
-/** Уникальные типы наших компонентов, которые тоже считаются текстовыми полями */
+/** Уникальные значения свойства type наших компонентов (не имена тегов) */
 const customSubmitBlockingElementTypes = new Set([
   'date-interval', 'time-interval', 'year',
 ]);
 //<fu-custom-types
 
 //>fu-custom
-/** Кастомный элемент: в имени тега всегда есть дефис */
+/** Кастомный элемент: его тег зарегистрирован через customElements.define */
 function isCustomElement($element: Element): boolean {
-  return $element.localName.includes('-');
+  return customElements.get($element.localName) !== undefined;
 }
 
-/** Свойство type компонента, если это строка */
-function getElementType($element: Element): string | undefined {
+/** Свойство type компонента или пустая строка */
+function getElementType($element: Element): string {
   const type = ($element as Element & { type?: unknown }).type;
-  return typeof type === 'string' ? type : undefined;
+  return typeof type === 'string' ? type : '';
 }
 //<fu-custom
 
 //>fu-isSubmitButton
 function isSubmitButton($element: Element): boolean {
   if ($element instanceof HTMLButtonElement) return $element.type === 'submit';
-  if ($element instanceof HTMLInputElement) return $element.type === 'submit' || $element.type === 'image';
+  if ($element instanceof HTMLInputElement) return $element.type === 'submit';
 //>fu-custom-button
   return isCustomElement($element) && getElementType($element) === 'submit';
 //<fu-custom-button
@@ -40,32 +40,24 @@ function isSubmitBlocking($element: Element): boolean {
   if ($element instanceof HTMLInputElement) {
     return submitBlockingElementTypes.has($element.type);
   }
-  if (!isCustomElement($element)) {
-    return false; // textarea, select, button, fieldset, output
-  }
 //>fu-custom-check
-  const type = getElementType($element);
-  return type !== undefined
-    && (submitBlockingElementTypes.has(type) || customSubmitBlockingElementTypes.has(type));
+  if (isCustomElement($element)) {
+    const type = getElementType($element);
+    if (submitBlockingElementTypes.has(type)) {
+      return true;
+    }
+    return customSubmitBlockingElementTypes.has(type);
+  }
 //<fu-custom-check
+  return false; // textarea, select, button, fieldset, output
 }
 //<fu-isSubmitBlocking
 
 //>fu-getDefaultButton
 /** Первая submit-кнопка формы в порядке документа, включая кнопки с form="id" вне <form> */
 function getDefaultButton($form: HTMLFormElement): HTMLElement | null {
-  let button = (Array.from($form.elements).find(isSubmitButton) as HTMLElement | undefined) ?? null;
-
-//>fu-image
-  // <input type="image"> не входит в form.elements
-  const root = $form.getRootNode() as Document | ShadowRoot;
-  const image = Array.from(root.querySelectorAll('input')).find($ => $.type === 'image' && $.form === $form);
-  if (image && (!button || button.compareDocumentPosition(image) & Node.DOCUMENT_POSITION_PRECEDING)) {
-    button = image;
-  }
-//<fu-image
-
-  return button;
+  const button = Array.from($form.elements).find(isSubmitButton) as HTMLElement | undefined;
+  return button || null;
 }
 //<fu-getDefaultButton
 

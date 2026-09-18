@@ -112,7 +112,7 @@ function renderFile(name, text, container) {
 }
 
 export async function renderCode(container) {
-  const texts = await Promise.all(FILES.map((f) => fetch(`code/${f}.txt`).then((r) => r.text())));
+  const texts = await Promise.all(FILES.map((f) => fetch(`code/${f}.txt`, { cache: 'no-cache' }).then((r) => r.text())));
   FILES.forEach((f, index) => renderFile(f, texts[index], container));
 }
 

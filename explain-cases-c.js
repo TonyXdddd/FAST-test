@@ -34,7 +34,7 @@ export default [
     expect: 'submit',
     code: 'fu-custom fu-isSubmitBlocking',
     expectText: '<code>form.requestSubmit()</code>: считается только поле',
-    why: 'Эти элементы тоже есть в <code>form.elements</code> и не являются ни input, ни textarea — но и кастомными они не являются: в имени тега нет дефиса. Поэтому признак «не input и не textarea» ненадёжен, и проверка идёт по дефису.',
+    why: 'Эти элементы тоже есть в <code>form.elements</code> и не являются ни input, ни textarea, но и кастомными они не являются: <code>customElements.get()</code> для их тегов возвращает <code>undefined</code>. Поэтому признак «не input и не textarea» ненадёжен, и кастомность проверяется через реестр.',
     markup: `<form id="c24-form"><x-input id="c24-name" data-primary placeholder="Имя"></x-input><fieldset id="c24-group"><legend>группа</legend></fieldset><output id="c24-total">42</output><button type="button" id="c24-action">Действие</button></form>`,
   },
 ];

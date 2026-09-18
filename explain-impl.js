@@ -90,17 +90,17 @@ const submitBlockingElementTypes = new Set(['text', 'search', 'url', 'tel', 'ema
 const customSubmitBlockingElementTypes = new Set(['date-interval', 'time-interval', 'year']);
 
 function isCustomElement($element) {
-  return $element.localName.includes('-');
+  return customElements.get($element.localName) !== undefined;
 }
 
 function getElementType($element) {
   const type = $element.type;
-  return typeof type === 'string' ? type : undefined;
+  return typeof type === 'string' ? type : '';
 }
 
 function isSubmitButton($element) {
   if ($element instanceof HTMLButtonElement) return $element.type === 'submit';
-  if ($element instanceof HTMLInputElement) return $element.type === 'submit' || $element.type === 'image';
+  if ($element instanceof HTMLInputElement) return $element.type === 'submit';
   return isCustomElement($element) && getElementType($element) === 'submit';
 }
 
@@ -108,11 +108,14 @@ function isSubmitBlocking($element) {
   if ($element instanceof HTMLInputElement) {
     return submitBlockingElementTypes.has($element.type);
   }
-  if (!isCustomElement($element)) {
-    return false;
+  if (isCustomElement($element)) {
+    const type = getElementType($element);
+    if (submitBlockingElementTypes.has(type)) {
+      return true;
+    }
+    return customSubmitBlockingElementTypes.has(type);
   }
-  const type = getElementType($element);
-  return type !== undefined && (submitBlockingElementTypes.has(type) || customSubmitBlockingElementTypes.has(type));
+  return false;
 }
 
 // только для журнала: почему элемент считается или не считается полем
@@ -120,9 +123,9 @@ function blockingReason($element) {
   if ($element instanceof HTMLInputElement) {
     return submitBlockingElementTypes.has($element.type) ? `нативный input, type «${$element.type}» из первого Set` : `нативный input, type «${$element.type}» не в списке`;
   }
-  if (!isCustomElement($element)) return `нативный ${$element.localName} — не поле`;
+  if (!isCustomElement($element)) return `${$element.localName} не зарегистрирован в customElements — не поле`;
   const type = getElementType($element);
-  if (type === undefined) return 'кастомный, type не задан';
+  if (type === '') return 'кастомный, type не задан';
   if (submitBlockingElementTypes.has(type)) return `кастомный, type «${type}» из первого Set`;
   if (customSubmitBlockingElementTypes.has(type)) return `кастомный, type «${type}» из второго Set (уникальные типы)`;
   return `кастомный, type «${type}» нет ни в одном Set`;
@@ -137,14 +140,7 @@ function getDefaultButton($form, host) {
     return `${d(el)} — <b>первая submit-кнопка</b>`;
   });
   trace(host, 'ours', `<b>шаг 2</b> · ищем кнопку по умолчанию в <code>form.elements</code> (порядок документа, включая <code>form="id"</code>):<br>${rows.join('<br>')}`, 'fu-getDefaultButton fu-isSubmitButton');
-
-  const root = $form.getRootNode();
-  const image = Array.from(root.querySelectorAll('input')).find(($) => $.type === 'image' && $.form === $form);
-  if (image && (!button || button.compareDocumentPosition(image) & Node.DOCUMENT_POSITION_PRECEDING)) {
-    trace(host, 'ours', `${d(image)} стоит раньше — берём её (<code>input[type=image]</code> нет в <code>form.elements</code>)`, 'fu-image');
-    button = image;
-  }
-  return button;
+  return button || null;
 }
 
 function mimicFormSubmitBehavior($elementInternals, host) {
